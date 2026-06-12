@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cortinas Terán | Cotizador</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg:#0e0a0b; --surface:#161012; --surface-2:#1e1416; --line:#322428;
+      --text:#f4f0f1; --muted:#c4b0b4; --wine:#A0202D; --wine-soft:rgba(160,32,45,.12);
+      --wine-light:#c94050; --wine-glow:rgba(160,32,45,.30);
+      --green:#22c55e; --danger:#ef4444; --shadow:0 18px 42px rgba(0,0,0,.35);
+      --radius:22px; --radius-sm:16px; --sans:Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0; color:var(--text); font-family:var(--sans);
+      background:radial-gradient(circle at top left, rgba(160,32,45,.07), transparent 28%),
+                 radial-gradient(circle at top right, rgba(160,32,45,.04), transparent 20%),
+                 linear-gradient(180deg, #0e0a0b 0%, #130d0f 48%, #0e0a0b 100%);
+    }
+    body::before { content:''; position:fixed; inset:0 0 auto 0; height:4px; z-index:999; background:linear-gradient(90deg,#1a0a0c 0%,#6a1020 40%,#A0202D 100%); }
+    .page { max-width:1320px; margin:0 auto; padding:22px 16px 110px; }
+    .topbar { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .brand-logo-wrap { width:58px; height:58px; border-radius:50%; display:grid; place-items:center; background:#f5ede8; overflow:hidden; border:2px solid rgba(160,32,45,.40); box-shadow:var(--shadow); flex-shrink:0; }
+    .brand-logo { width:100%; height:100%; object-fit:contain; display:block; }
+    .brand-title { font-size:26px; font-weight:850; letter-spacing:-.05em; line-height:1.05; margin-bottom:4px; }
+    .brand-sub { color:var(--muted); font-size:13px; line-height:1.45; }
+    .pill { display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--muted); border-radius:999px; font-size:12px; font-weight:700; }
+    .dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 14px rgba(34,197,94,.4); }
+    .hero { display:block; margin-bottom:16px; }
+    .hero-card,.card { background:linear-gradient(180deg, rgba(255,255,255,.03), transparent 22%), var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+    .hero-card { padding:24px; position:relative; overflow:hidden; }
+    .hero-card::after { content:''; position:absolute; inset:auto -44px -44px auto; width:180px; height:180px; background:radial-gradient(circle, rgba(160,32,45,.18), transparent 65%); pointer-events:none; }
+    .hero-title { font-size:36px; font-weight:850; letter-spacing:-.06em; line-height:1.04; margin-bottom:10px; max-width:720px; }
+    .hero-desc { color:var(--muted); font-size:15px; line-height:1.7; max-width:760px; }
+    .how-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; margin-top:16px; }
+    .how-step { padding:12px; border-radius:16px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); }
+    .how-step strong { display:block; margin-bottom:6px; color:var(--wine-light); font-size:12px; letter-spacing:.04em; }
+    .how-step span { color:var(--muted); font-size:12px; line-height:1.6; display:block; }
+    .estimate-card { padding:22px; display:flex; flex-direction:column; justify-content:space-between; }
+    .estimate-label { font-size:12px; color:#e8a0a8; font-weight:800; letter-spacing:.18em; text-transform:uppercase; }
+    .estimate-value { font-size:54px; font-weight:850; letter-spacing:-.07em; line-height:1; margin:14px 0 8px; color:var(--wine-light); }
+    .estimate-sub { color:var(--muted); font-size:13px; line-height:1.6; }
+    .estimate-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; margin-top:18px; }
+    .mini-metric { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); border-radius:var(--radius-sm); padding:12px; }
+    .mini-metric .k { color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin-bottom:7px; }
+    .mini-metric .v { font-size:18px; font-weight:800; letter-spacing:-.03em; }
+    .layout { display:grid; grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr); gap:16px; align-items:start; }
+    .left-stack { display:grid; gap:16px; }
+    .card { padding:18px; }
+    .sticky { position:sticky; top:18px; }
+    .section-header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+    .section-title { font-size:13px; font-weight:800; color:#e8a0a8; text-transform:uppercase; letter-spacing:.18em; }
+    .section-sub { font-size:12px; color:var(--muted); line-height:1.6; margin-top:6px; }
+    .tabs { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .tab-btn { border:1px solid var(--line); background:var(--surface-2); color:var(--text); border-radius:18px; padding:14px; min-height:96px; text-align:left; cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; gap:8px; transition:.18s ease; }
+    .tab-btn:hover { transform:translateY(-1px); border-color:rgba(160,32,45,.40); }
+    .tab-btn.active { border-color:rgba(160,32,45,.60); background:linear-gradient(180deg, rgba(160,32,45,.14), rgba(255,255,255,.02)), var(--surface-2); box-shadow:0 10px 22px rgba(160,32,45,.12); }
+    .tab-title { font-size:15px; font-weight:800; letter-spacing:-.02em; }
+    .tab-copy { font-size:12px; color:var(--muted); line-height:1.5; }
+    .tab-kpi { font-size:12px; font-weight:800; color:#e8a0a8; }
+    .service-panel { display:none; animation:fadeIn .22s ease; }
+    .service-panel.active { display:block; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+    .type-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .type-btn { border:1px solid var(--line); background:var(--surface-2); color:var(--text); border-radius:16px; padding:14px; text-align:left; cursor:pointer; transition:.18s ease; min-height:108px; display:flex; flex-direction:column; justify-content:space-between; gap:8px; }
+    .type-btn:hover { transform:translateY(-1px); border-color:rgba(160,32,45,.40); }
+    .type-btn.active { border-color:rgba(160,32,45,.60); background:linear-gradient(180deg, rgba(160,32,45,.12), rgba(255,255,255,.02)), var(--surface-2); box-shadow:0 10px 22px rgba(160,32,45,.12); }
+    .type-name { font-size:16px; font-weight:800; letter-spacing:-.03em; }
+    .type-mini { font-size:11px; line-height:1.5; color:var(--muted); }
+    .grid-2,.grid-3,.grid-4 { display:grid; gap:12px; }
+    .grid-2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .grid-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .grid-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+    .field { margin-bottom:10px; }
+    label.label { display:block; margin-bottom:7px; color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    input[type="text"],input[type="number"],select,textarea { width:100%; border:1px solid var(--line); background:var(--surface-2); color:var(--text); border-radius:14px; padding:13px; font-size:14px; outline:none; transition:border-color .15s ease, box-shadow .15s ease; }
+    input[type="file"] { width:100%; border:1px solid var(--line); background:var(--surface-2); color:var(--muted); border-radius:14px; padding:13px; font-size:14px; outline:none; }
+    input[type="file"]::file-selector-button { margin-right:12px; border:none; background:linear-gradient(90deg, #7a1520 0%, #A0202D 100%); color:#fff; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; }
+    textarea { min-height:98px; resize:vertical; }
+    input:focus,select:focus,textarea:focus { border-color:rgba(160,32,45,.55); box-shadow:0 0 0 4px rgba(160,32,45,.10); }
+    .help-inline { margin-top:10px; padding:11px 12px; border-radius:14px; background:rgba(160,32,45,.08); border:1px solid rgba(160,32,45,.22); color:#e8a0a8; font-size:12px; line-height:1.6; }
+    .help-inline.warning { color:#ffd5d5; background:rgba(239,68,68,.10); border-color:rgba(239,68,68,.28); }
+    .option-card { display:flex; align-items:flex-start; gap:12px; padding:14px; border:1px solid var(--line); background:rgba(255,255,255,.03); border-radius:16px; margin-top:12px; }
+    .option-card input { accent-color:var(--wine); width:18px; height:18px; margin-top:2px; }
+    .option-title { font-size:14px; font-weight:800; margin-bottom:4px; }
+    .option-price { color:#e8a0a8; font-size:12px; font-weight:800; }
+    .btn-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+    .btn { appearance:none; border:1px solid var(--line); background:var(--surface-2); color:var(--text); border-radius:14px; padding:12px 16px; font-weight:700; cursor:pointer; transition:.18s ease; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; }
+    .btn:hover { transform:translateY(-1px); border-color:rgba(255,255,255,.18); }
+    .btn-primary { background:linear-gradient(90deg, #7a1520 0%, #A0202D 100%); border-color:transparent; color:#fff; box-shadow:0 10px 22px rgba(160,32,45,.25); }
+    .btn-ghost { background:transparent; }
+    .list { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+    .empty { padding:20px 16px; text-align:center; color:var(--muted); border:1px dashed rgba(255,255,255,.12); border-radius:16px; background:rgba(255,255,255,.02); font-size:13px; line-height:1.7; }
+    .item-row { border:1px solid var(--line); background:var(--surface-2); border-radius:18px; padding:14px; }
+    .item-row-top { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+    .item-main { min-width:0; }
+    .item-row-title { font-size:15px; font-weight:800; letter-spacing:-.02em; margin-bottom:4px; }
+    .item-row-sub { color:var(--muted); font-size:12px; line-height:1.55; }
+    .price-pill { display:inline-flex; align-items:baseline; gap:6px; padding:8px 10px; border-radius:12px; background:rgba(160,32,45,.10); border:1px solid rgba(160,32,45,.25); font-weight:800; white-space:nowrap; flex-shrink:0; }
+    .price-pill .currency { font-size:12px; color:#e8a0a8; }
+    .price-pill .value { font-size:18px; letter-spacing:-.04em; color:var(--wine-light); }
+    .item-meta-row { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin-bottom:10px; }
+    .mini-detail { border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.03); border-radius:12px; padding:10px; }
+    .mini-detail .k { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-weight:700; margin-bottom:4px; }
+    .mini-detail .v { font-size:13px; font-weight:800; letter-spacing:-.02em; }
+    .item-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .repair-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .repair-option { display:none; }
+    .repair-item { margin-bottom:8px; border:1px solid var(--line); background:var(--surface-2); border-radius:12px; padding:10px 12px; }
+    .repair-label { display:flex; align-items:flex-start; gap:8px; cursor:pointer; }
+    .repair-label input[type="checkbox"] { accent-color:var(--wine); width:18px; height:18px; flex-shrink:0; margin-top:1px; }
+    .repair-name { flex:1; font-size:13px; font-weight:700; line-height:1.3; }
+    .repair-price { font-size:13px; font-weight:600; white-space:nowrap; margin-left:8px; color:#e8a0a8; }
+    .repair-stepper { display:flex; align-items:center; gap:6px; margin:4px 0 2px 26px; }
+    .stepper-btn { width:24px; height:24px; border-radius:50%; border:none; background:#e0e0e0; font-size:16px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; color:#333; }
+    .stepper-btn:hover { background:#ccc; }
+    .stepper-val { min-width:20px; text-align:center; font-size:14px; font-weight:600; color:var(--text); }
+    .stepper-label { font-size:12px; color:#888; }
+    .summary-table { width:100%; border-collapse:collapse; margin-top:6px; }
+    .summary-table td { padding:12px 0; border-bottom:1px solid rgba(255,255,255,.06); font-size:14px; vertical-align:top; }
+    .summary-table td:last-child { text-align:right; font-weight:800; letter-spacing:-.02em; }
+    .summary-table tr.total td { font-size:19px; border-bottom:none; padding-top:16px; color:var(--wine-light); }
+    .summary-table .label-sub { display:block; color:var(--muted); font-size:11px; font-weight:600; margin-top:4px; }
+    .notice { margin-top:16px; border-radius:16px; padding:14px; border:1px solid rgba(160,32,45,.25); background:rgba(160,32,45,.08); color:#e8a0a8; font-size:13px; line-height:1.7; }
+    .mobile-cta { display:none; position:fixed; left:10px; right:10px; bottom:10px; z-index:1000; padding:10px; border-radius:18px; background:rgba(18,10,12,.96); border:1px solid rgba(160,32,45,.25); backdrop-filter:blur(12px); box-shadow:0 14px 28px rgba(0,0,0,.35); align-items:center; justify-content:space-between; gap:10px; }
+    .mobile-cta .k { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+    .mobile-cta .v { color:var(--wine-light); font-size:20px; font-weight:800; letter-spacing:-.04em; }
+    .topbar-right { display:flex; align-items:center; flex-shrink:0; }
+    .wely-credit { margin-top:26px; margin-bottom:80px; display:flex; justify-content:center; align-items:center; gap:8px; font-size:11px; color:rgba(255,255,255,.35); opacity:.8; }
+    .wely-credit span { white-space:nowrap; }
+    .wely-logo-text { font-size:13px; font-weight:800; letter-spacing:-.02em; color:rgba(255,255,255,.45); }
+    @media (max-width:1140px) { .hero,.layout { grid-template-columns:1fr; } .sticky { position:static; } }
+    @media (max-width:920px) { .page { padding:18px 14px 106px; } .hero-title { font-size:30px; } .estimate-value { font-size:44px; } .estimate-grid,.tabs,.grid-3,.type-grid,.item-meta-row,.repair-grid,.how-grid { grid-template-columns:1fr 1fr; } .mobile-cta { display:flex; } }
+    @media (max-width:620px) { .hero-title { font-size:24px; } .hero-desc { font-size:14px; } .brand-title { font-size:21px; } .estimate-grid,.tabs,.grid-2,.grid-3,.type-grid,.item-meta-row,.repair-grid,.how-grid { grid-template-columns:1fr; } .item-row-top { align-items:flex-start; } .btn-row .btn { width:100%; } .mobile-cta .btn { width:auto; } }
+    #excel-toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(120px); background:#1a0c0e; border:1px solid var(--wine); border-radius:14px; padding:14px 22px; display:flex; align-items:center; gap:14px; box-shadow:0 8px 32px rgba(0,0,0,.55); z-index:9999; transition:transform .4s cubic-bezier(.34,1.56,.64,1), opacity .3s; opacity:0; pointer-events:none; max-width:90vw; }
+    #excel-toast.show { transform:translateX(-50%) translateY(0); opacity:1; pointer-events:auto; }
+    .toast-icon { font-size:28px; flex-shrink:0; }
+    .toast-body { line-height:1.4; }
+    .toast-title { font-weight:700; color:var(--wine-light); font-size:14px; }
+    .toast-msg { color:var(--muted); font-size:13px; margin-top:2px; }
+    .toast-close { margin-left:10px; background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:0 4px; flex-shrink:0; }
+    .val-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.78); display:flex; align-items:center; justify-content:center; z-index:9999; padding:24px; }
+    .val-modal-box { background:var(--surface); border:1.5px solid var(--wine); border-radius:20px; padding:32px 24px 24px; max-width:320px; width:100%; text-align:center; box-shadow:0 8px 40px rgba(0,0,0,.6); animation:valPop .18s ease; }
+    @keyframes valPop { from { transform:scale(.92); opacity:0; } to { transform:scale(1); opacity:1; } }
+    .val-modal-icon { font-size:38px; margin-bottom:10px; }
+    .val-modal-msg { color:var(--text); font-size:15px; line-height:1.55; margin-bottom:22px; }
+    .val-modal-btn { width:100%; }
+  </style>
+</head>
+<body>
+  <div id="excel-toast">
+    <div class="toast-icon">📊</div>
+    <div class="toast-body">
+      <div class="toast-title">Excel descargado</div>
+      <div class="toast-msg" id="toast-msg">Adjúntalo en WhatsApp para enviarlo junto con la cotización.</div>
+    </div>
+    <button class="toast-close" onclick="closeExcelToast()">✕</button>
+  </div>
+
+  <div class="page">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-logo-wrap">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" width="58" height="58">
+            <circle cx="60" cy="60" r="56" fill="#f5ede8" stroke="#A0202D" stroke-width="2.5"/>
+            <text x="60" y="38" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="9" fill="#A0202D" letter-spacing="3.5" font-weight="400">CORTINAS</text>
+            <text x="60" y="74" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="32" font-style="italic" fill="#A0202D">Terán</text>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">Cortinas Terán</div>
+          <div class="brand-sub">Cotiza tus cortinas a medida en segundos.</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="pill"><span class="dot"></span> Valor estimado al instante</div>
+      </div>
+    </div>
+
+    <div style="background:linear-gradient(135deg,#6a1020 0%,#A0202D 100%);color:#fff;text-align:center;padding:12px 16px;font-size:14px;font-weight:700;letter-spacing:.01em;border-radius:14px;margin-bottom:16px;">
+      ✅ Instalación profesional incluida &nbsp;•&nbsp; Cortinas a medida en Santiago &nbsp;•&nbsp; Visita técnica gratuita &nbsp;•&nbsp; Roller | Dúo | Screen
+    </div>
+
+    <div class="hero">
+      <div class="hero-card">
+        <div class="hero-title">Cotiza tu cortina en minutos</div>
+        <div class="help-inline" style="margin-top:12px;">✔ <strong>Instalación incluida sin costo adicional</strong> en Santiago. Ingresa tus medidas y obtén un precio estimado al instante.</div>
+        <div class="how-grid">
+          <div class="how-step"><strong>① Elige el tipo</strong><span>Selecciona entre Blackout, Screen o Dúo según tu necesidad.</span></div>
+          <div class="how-step"><strong>② Ingresa las medidas</strong><span>Ancho y alto en centímetros de cada ventana o ambiente.</span></div>
+          <div class="how-step"><strong>③ Obtén tu cotización</strong><span>Precio estimado al instante. Envía por WhatsApp o descarga en Excel.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="left-stack">
+        <div class="card">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Servicio</div>
+              <div class="section-sub">¿Qué necesitas cotizar hoy?</div>
+            </div>
+          </div>
+          <div class="tabs" id="serviceTabs"></div>
+        </div>
+
+        <!-- Panel: Cortinas nuevas -->
+        <div class="service-panel active card" id="panel-curtains">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Tipo de Cortina</div>
+              <div class="section-sub">Selecciona el material que mejor se adapta a tu espacio.</div>
+            </div>
+          </div>
+          <div class="type-grid" id="curtainTypeGrid"></div>
+
+          <div style="margin-top:20px;">
+            <div class="section-title" style="margin-bottom:14px;">Agregar cortina</div>
+            <div class="grid-2">
+              <div class="field">
+                <label class="label">Nombre del ambiente</label>
+                <input type="text" id="curtainLabel" placeholder="Ej: Living, Dormitorio 1…" />
+              </div>
+              <div class="field">
+                <label class="label">Cantidad de paños</label>
+                <input type="number" id="curtainQty" min="1" value="1" />
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label class="label">Ancho (cm)</label>
+                <input type="number" id="curtainWidth" placeholder="Ej: 180" min="1" />
+              </div>
+              <div class="field">
+                <label class="label">Alto (cm)</label>
+                <input type="number" id="curtainHeight" placeholder="Ej: 220" min="1" />
+              </div>
+            </div>
+            <div class="option-card">
+              <input type="checkbox" id="curtainMotor" />
+              <div>
+                <div class="option-title">Agregar motorización</div>
+                <div class="option-price">+ $80.000 por cortina — control remoto incluido</div>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-primary" onclick="addCurtain()">＋ Agregar cortina</button>
+              <button class="btn btn-ghost" onclick="clearCurtainForm()">Limpiar</button>
+            </div>
+          </div>
+
+          <div style="margin-top:20px;">
+            <div class="section-title" style="margin-bottom:4px;">Cortinas agregadas</div>
+            <div class="list" id="curtainList"></div>
+          </div>
+        </div>
+
+        <!-- Panel: Lavado -->
+        <div class="service-panel card" id="panel-wash">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Lavado de Cortinas</div>
+              <div class="section-sub">Servicio con retiro y entrega. Precio incluye hasta 4 paños.</div>
+            </div>
+          </div>
+
+          <div style="margin-top:4px;">
+            <div class="section-title" style="margin-bottom:12px;">Agregar servicio de lavado</div>
+            <div class="grid-2" style="margin-bottom:12px;">
+              <div class="field">
+                <label class="label">Tipo de cortina</label>
+                <select id="washType">
+                  <option value="basic">Screen / Blackout</option>
+                  <option value="duo">Dúo</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="label">Cantidad de paños</label>
+                <input type="number" id="washQty" min="1" value="4" />
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Nombre del ambiente (opcional)</label>
+              <input type="text" id="washLabel" placeholder="Ej: Living, Dormitorio…" />
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-primary" onclick="addWash()">＋ Agregar lavado</button>
+              <button class="btn btn-ghost" onclick="clearWashForm()">Limpiar</button>
+            </div>
+          </div>
+
+          <div style="margin-top:20px;">
+            <div class="section-title" style="margin-bottom:4px;">Servicios de lavado</div>
+            <div class="list" id="washList"></div>
+          </div>
+        </div>
+
+        <!-- Panel: Reparaciones -->
+        <div class="service-panel card" id="panel-repairs">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Reparaciones</div>
+              <div class="section-sub">Selecciona los servicios que necesitas y ajusta las cantidades.</div>
+            </div>
+          </div>
+          <div id="repairOptions"></div>
+        </div>
+
+        <!-- Datos del cliente -->
+        <div class="card">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Datos del cliente</div>
+              <div class="section-sub">Opcional: para incluir en la cotización.</div>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label class="label">Nombre</label>
+              <input type="text" id="clientName" placeholder="Nombre del cliente" />
+            </div>
+            <div class="field">
+              <label class="label">Teléfono / WhatsApp</label>
+              <input type="text" id="clientPhone" placeholder="+56 9 1234 5678" />
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">Dirección</label>
+            <input type="text" id="clientAddress" placeholder="Calle, número, comuna — Santiago" />
+          </div>
+          <div class="field">
+            <label class="label">Notas adicionales</label>
+            <textarea id="customerMessage" placeholder="Especificaciones especiales, colores, telas, observaciones…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna derecha: resumen -->
+      <div class="sticky">
+        <div class="card estimate-card">
+          <div>
+            <div class="estimate-label">Total estimado</div>
+            <div class="estimate-value" id="totalDisplay">$0</div>
+            <div class="estimate-sub">Precio referencial. Sujeto a confirmación tras visita técnica gratuita.</div>
+          </div>
+          <div class="estimate-grid">
+            <div class="mini-metric"><div class="k">Cortinas</div><div class="v" id="metaCurtains">—</div></div>
+            <div class="mini-metric"><div class="k">Lavado</div><div class="v" id="metaWash">—</div></div>
+            <div class="mini-metric"><div class="k">Reparac.</div><div class="v" id="metaRepairs">—</div></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title" style="margin-bottom:14px;">Resumen de la cotización</div>
+          <table class="summary-table" id="summaryTable"></table>
+          <div class="notice">
+            💡 Esta cotización es referencial. El precio final se confirma luego de la visita técnica gratuita en tu domicilio.
+          </div>
+          <div class="btn-row" style="margin-top:18px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="sendWhatsApp()">📲 Enviar por WhatsApp</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn" style="flex:1;" onclick="exportExcel()">📊 Descargar Excel</button>
+            <button class="btn btn-ghost" onclick="resetAll()">🗑 Limpiar todo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-cta" id="mobileCta">
+      <div><div class="k">Total estimado</div><div class="v" id="mobileTotalDisplay">$0</div></div>
+      <button class="btn btn-primary" onclick="sendWhatsApp()">📲 WhatsApp</button>
+    </div>
+
+    <div class="wely-credit">
+      <span>Herramienta digital desarrollada por</span>
+      <span class="wely-logo-text">Wely ✦</span>
+      <span>— automatización para emprendedores</span>
+    </div>
+  </div>
+
+  <script>
+    const currency = new Intl.NumberFormat('es-CL');
+    const CONFIG = {
+      tabs: [
+        { key: 'curtains', title: 'Cortinas nuevas', copy: 'Fabricadas a medida para tu espacio.' },
+        { key: 'wash', title: 'Lavado', copy: 'Retiro y entrega a domicilio.' },
+        { key: 'repairs', title: 'Reparaciones', copy: 'Repuestos y ajustes para tus cortinas.' }
+      ],
+      curtainTypes: {
+        blackout: { name: 'Blackout', description: 'Oscurecimiento total y máxima privacidad.', rate: 22000 },
+        screen: { name: 'Screen', description: 'Luz natural filtrada, vista exterior preservada.', rate: 22000 },
+        duo: { name: 'Dúo', description: 'Screen + Blackout en un solo sistema.', rate: 45000 }
+      },
+      motorExtra: 80000,
+      wash: {
+        basic: { name: 'Screen / Blackout', base: 16000, included: 4, extra: 4000 },
+        duo: { name: 'Dúo', base: 25000, included: 4, extra: 5000 }
+      },
+      repairs: [
+        { key: 'cadena', name: 'Cambio de cadena (incluye topes de subida y bajada)', price: 7000 },
+        { key: 'mecanismo', name: 'Cambio de mecanismo (incluye cadena y topes)', price: 25000 },
+        { key: 'zuncho', name: 'Cambio de zuncho (sujeción de tela a contrapeso)', price: 5000 },
+        { key: 'base', name: 'Cambio de contrapeso (riel inferior)', price: 12000 },
+        { key: 'tubo', name: 'Cambio de tubo', price: 8000 },
+        { key: 'ajuste', name: 'Ajuste de medida', price: 30000 },
+        { key: 'hilachas', name: 'Corte y sellado de hilachas', price: 5000 },
+        { key: 'instalacion', name: 'Instalación por cortina (cortinas propias)', price: 12000 },
+        { key: 'altura', name: 'Instalación en altura', price: 18000 }
+      ]
+    };
+
+    const STORAGE_KEY = 'wely_teran_quote_v1';
+    const defaultState = { activeTab: 'curtains', curtainType: 'blackout', curtains: [], washes: [], repairs: [], repairQty: {}, customerMessage: '' };
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? { ...defaultState, ...JSON.parse(raw) } : { ...defaultState };
+      } catch(e) { return { ...defaultState }; }
+    }
+    function saveState() {
+      const msg = document.getElementById('customerMessage');
+      if (msg) state.customerMessage = msg.value || '';
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+    function money(n) { return '$' + currency.format(Math.round(n || 0)); }
+    function escapeHtml(v) { return String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
+
+    function renderTabs() {
+      const calc = computeTotals();
+      const kpi = {
+        curtains: calc.curtains.items.length ? `${calc.curtains.items.length} ítem(s)` : 'Sin ítems',
+        wash: calc.wash.items.length ? `${calc.wash.items.length} ítem(s)` : 'Sin ítems',
+        repairs: calc.repairs.items.length ? `${calc.repairs.items.length} seleccionado(s)` : 'Sin selección'
+      };
+      document.getElementById('serviceTabs').innerHTML = CONFIG.tabs.map(tab => `
+        <button type="button" class="tab-btn ${state.activeTab === tab.key ? 'active' : ''}" data-tab="${tab.key}">
+          <div><div class="tab-title">${tab.title}</div><div class="tab-copy">${tab.copy}</div></div>
+          <div class="tab-kpi">${kpi[tab.key]}</div>
+        </button>`).join('');
+      document.querySelectorAll('#serviceTabs .tab-btn').forEach(btn =>
+        btn.addEventListener('click', () => setActiveTab(btn.dataset.tab)));
+    }
+
+    function setActiveTab(key) {
+      state.activeTab = key;
+      document.querySelectorAll('.service-panel').forEach(p => p.classList.remove('active'));
+      const target = document.getElementById('panel-' + key);
+      if (target) target.classList.add('active');
+      document.querySelectorAll('#serviceTabs .tab-btn').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.tab === key));
+      saveState();
+    }
+
+    function renderCurtainTypes() {
+      document.getElementById('curtainTypeGrid').innerHTML = Object.entries(CONFIG.curtainTypes).map(([key, item]) => `
+        <button type="button" class="type-btn ${state.curtainType === key ? 'active' : ''}" data-type="${key}">
+          <div><div class="type-name">${item.name}</div><div class="type-mini">${item.description}</div></div>
+          <div class="type-mini" style="color:#e8a0a8;font-weight:700;">${money(item.rate)}/m²</div>
+        </button>`).join('');
+      document.querySelectorAll('#curtainTypeGrid .type-btn').forEach(btn =>
+        btn.addEventListener('click', () => { state.curtainType = btn.dataset.type; renderCurtainTypes(); saveState(); }));
+    }
+
+    function clearCurtainForm() {
+      ['curtainLabel','curtainWidth','curtainHeight'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+      const q = document.getElementById('curtainQty'); if(q) q.value = 1;
+      const m = document.getElementById('curtainMotor'); if(m) m.checked = false;
+    }
+
+    function addCurtain() {
+      const label = (document.getElementById('curtainLabel').value || '').trim() || `Ambiente ${state.curtains.length + 1}`;
+      const width = Math.max(0, parseFloat(document.getElementById('curtainWidth').value) || 0);
+      const height = Math.max(0, parseFloat(document.getElementById('curtainHeight').value) || 0);
+      const qty = Math.max(1, parseInt(document.getElementById('curtainQty').value) || 1);
+      const motor = document.getElementById('curtainMotor').checked;
+      if (!width || !height) { showModal('⚠️', 'Ingresa el ancho y alto en centímetros para continuar.'); return; }
+      state.curtains.push({ label, type: state.curtainType, width, height, qty, motor });
+      clearCurtainForm();
+      renderAll();
+    }
+
+    function removeCurtain(index) { state.curtains.splice(index, 1); renderAll(); }
+    function duplicateCurtain(index) { const copy = JSON.parse(JSON.stringify(state.curtains[index])); copy.label += ' (copia)'; state.curtains.splice(index+1,0,copy); renderAll(); }
+
+    function computeCurtain(item) {
+      const cfg = CONFIG.curtainTypes[item.type];
+      const area = (item.width * item.height) / 10000;
+      const unitBase = area * cfg.rate;
+      const unitMotor = item.motor ? CONFIG.motorExtra : 0;
+      return { ...item, cfg, area, unitBase, unitMotor, total: (unitBase + unitMotor) * item.qty };
+    }
+
+    function renderCurtainsList(calc) {
+      const wrap = document.getElementById('curtainList');
+      if (!calc.items.length) { wrap.innerHTML = '<div class="empty">Aún no has agregado cortinas.<br>Completa los datos y presiona "Agregar cortina".</div>'; return; }
+      wrap.innerHTML = calc.items.map((item, idx) => `
+        <div class="item-row">
+          <div class="item-row-top">
+            <div class="item-main">
+              <div class="item-row-title">${escapeHtml(item.label)}</div>
+              <div class="item-row-sub">${item.cfg.name} · ${item.width} × ${item.height} cm · ${item.qty} paño(s)${item.motor ? ' · ⚡ Motorizado' : ''}</div>
+            </div>
+            <div class="price-pill"><span class="currency">$</span><span class="value">${currency.format(Math.round(item.total))}</span></div>
+          </div>
+          <div class="item-meta-row">
+            <div class="mini-detail"><div class="k">Área</div><div class="v">${item.area.toFixed(3)} m²</div></div>
+            <div class="mini-detail"><div class="k">Precio/m²</div><div class="v">${money(item.cfg.rate)}</div></div>
+            <div class="mini-detail"><div class="k">Paños</div><div class="v">${item.qty}</div></div>
+            <div class="mini-detail"><div class="k">Motor</div><div class="v">${item.motor ? 'Sí' : 'No'}</div></div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-ghost" style="font-size:12px;min-height:36px;padding:8px 12px;" onclick="duplicateCurtain(${idx})">📋 Duplicar</button>
+            <button class="btn btn-ghost" style="font-size:12px;min-height:36px;padding:8px 12px;color:#ef4444;" onclick="removeCurtain(${idx})">🗑 Eliminar</button>
+          </div>
+        </div>`).join('');
+    }
+
+    // WASH
+    function clearWashForm() {
+      const l = document.getElementById('washLabel'); if(l) l.value = '';
+      const q = document.getElementById('washQty'); if(q) q.value = 4;
+      const t = document.getElementById('washType'); if(t) t.value = 'basic';
+    }
+
+    function addWash() {
+      const type = document.getElementById('washType').value;
+      const qty = Math.max(1, parseInt(document.getElementById('washQty').value) || 1);
+      const label = (document.getElementById('washLabel').value || '').trim() || `Lavado ${state.washes.length + 1}`;
+      state.washes.push({ type, qty, label });
+      clearWashForm();
+      renderAll();
+    }
+
+    function removeWash(idx) { state.washes.splice(idx, 1); renderAll(); }
+
+    function computeWash(item) {
+      const cfg = CONFIG.wash[item.type];
+      const extra = Math.max(0, item.qty - cfg.included);
+      const total = cfg.base + extra * cfg.extra;
+      return { ...item, cfg, extra, total };
+    }
+
+    function renderWashList(calc) {
+      const wrap = document.getElementById('washList');
+      if (!calc.items.length) { wrap.innerHTML = '<div class="empty">Aún no has agregado servicios de lavado.</div>'; return; }
+      wrap.innerHTML = calc.items.map((item, idx) => `
+        <div class="item-row">
+          <div class="item-row-top">
+            <div class="item-main">
+              <div class="item-row-title">${escapeHtml(item.label)}</div>
+              <div class="item-row-sub">${item.cfg.name} · ${item.qty} paño(s) · Base ${money(item.cfg.base)} + ${item.extra} extra(s)</div>
+            </div>
+            <div class="price-pill"><span class="currency">$</span><span class="value">${currency.format(Math.round(item.total))}</span></div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-ghost" style="font-size:12px;min-height:36px;padding:8px 12px;color:#ef4444;" onclick="removeWash(${idx})">🗑 Eliminar</button>
+          </div>
+        </div>`).join('');
+    }
+
+    // REPAIRS
+    function renderRepairOptions() {
+      document.getElementById('repairOptions').innerHTML = CONFIG.repairs.map(r => `
+        <div class="repair-item">
+          <label class="repair-label">
+            <input type="checkbox" id="rep_${r.key}" onchange="toggleRepair('${r.key}')" ${state.repairs.includes(r.key) ? 'checked' : ''} />
+            <span class="repair-name">${r.name}${r.note ? ` <span style="color:var(--muted);font-size:11px;">(${r.note})</span>` : ''}</span>
+            <span class="repair-price">${money(r.price)}</span>
+          </label>
+          ${state.repairs.includes(r.key) ? `
+          <div class="repair-stepper">
+            <button class="stepper-btn" onclick="changeRepairQty('${r.key}',-1)">−</button>
+            <span class="stepper-val">${state.repairQty[r.key] || 1}</span>
+            <button class="stepper-btn" onclick="changeRepairQty('${r.key}',1)">＋</button>
+            <span class="stepper-label">unidad(es)</span>
+          </div>` : ''}
+        </div>`).join('');
+    }
+
+    function toggleRepair(key) {
+      const idx = state.repairs.indexOf(key);
+      if (idx >= 0) { state.repairs.splice(idx, 1); delete state.repairQty[key]; }
+      else { state.repairs.push(key); state.repairQty[key] = 1; }
+      renderAll();
+    }
+
+    function changeRepairQty(key, delta) {
+      state.repairQty[key] = Math.max(1, (state.repairQty[key] || 1) + delta);
+      renderAll();
+    }
+
+    // COMPUTE TOTALS
+    function computeTotals() {
+      const curtainItems = state.curtains.map(computeCurtain);
+      const washItems = state.washes.map(computeWash);
+      const repairItems = CONFIG.repairs.filter(r => state.repairs.includes(r.key)).map(r => ({
+        ...r, qty: state.repairQty[r.key] || 1, total: r.price * (state.repairQty[r.key] || 1)
+      }));
+      return {
+        curtains: { items: curtainItems, subtotal: curtainItems.reduce((s,i) => s + i.total, 0) },
+        wash: { items: washItems, subtotal: washItems.reduce((s,i) => s + i.total, 0) },
+        repairs: { items: repairItems, subtotal: repairItems.reduce((s,i) => s + i.total, 0) }
+      };
+    }
+
+    function renderSummary(calc) {
+      const total = calc.curtains.subtotal + calc.wash.subtotal + calc.repairs.subtotal;
+      document.getElementById('totalDisplay').textContent = money(total);
+      document.getElementById('mobileTotalDisplay').textContent = money(total);
+      document.getElementById('metaCurtains').textContent = calc.curtains.items.length ? money(calc.curtains.subtotal) : '—';
+      document.getElementById('metaWash').textContent = calc.wash.items.length ? money(calc.wash.subtotal) : '—';
+      document.getElementById('metaRepairs').textContent = calc.repairs.items.length ? money(calc.repairs.subtotal) : '—';
+
+      const rows = [];
+      if (calc.curtains.items.length) {
+        rows.push(`<tr><td><strong>Cortinas nuevas</strong><span class="label-sub">${calc.curtains.items.length} ítem(s)</span></td><td>${money(calc.curtains.subtotal)}</td></tr>`);
+        calc.curtains.items.forEach(i => rows.push(`<tr><td style="padding-left:12px;color:var(--muted);font-size:12px;">${escapeHtml(i.label)} (${i.qty} × ${i.cfg.name})</td><td style="color:var(--muted);font-size:12px;">${money(i.total)}</td></tr>`));
+      }
+      if (calc.wash.items.length) {
+        rows.push(`<tr><td><strong>Lavado</strong><span class="label-sub">${calc.wash.items.length} servicio(s)</span></td><td>${money(calc.wash.subtotal)}</td></tr>`);
+        calc.wash.items.forEach(i => rows.push(`<tr><td style="padding-left:12px;color:var(--muted);font-size:12px;">${escapeHtml(i.label)} (${i.qty} paños)</td><td style="color:var(--muted);font-size:12px;">${money(i.total)}</td></tr>`));
+      }
+      if (calc.repairs.items.length) {
+        rows.push(`<tr><td><strong>Reparaciones</strong><span class="label-sub">${calc.repairs.items.length} tipo(s)</span></td><td>${money(calc.repairs.subtotal)}</td></tr>`);
+        calc.repairs.items.forEach(i => rows.push(`<tr><td style="padding-left:12px;color:var(--muted);font-size:12px;">${i.name} ×${i.qty}</td><td style="color:var(--muted);font-size:12px;">${money(i.total)}</td></tr>`));
+      }
+      if (!rows.length) rows.push('<tr><td colspan="2" style="text-align:center;color:var(--muted);font-size:13px;">Agrega ítems para ver el resumen.</td></tr>');
+      rows.push(`<tr class="total"><td>Total estimado</td><td>${money(total)}</td></tr>`);
+      document.getElementById('summaryTable').innerHTML = rows.join('');
+    }
+
+    function renderAll() {
+      const calc = computeTotals();
+      renderTabs();
+      renderCurtainTypes();
+      renderCurtainsList(calc.curtains);
+      renderWashList(calc.wash);
+      renderRepairOptions();
+      renderSummary(calc);
+      saveState();
+    }
+
+    // WHATSAPP
+    function sendWhatsApp() {
+      const calc = computeTotals();
+      const total = calc.curtains.subtotal + calc.wash.subtotal + calc.repairs.subtotal;
+      const name = (document.getElementById('clientName')?.value || '').trim();
+      const phone = (document.getElementById('clientPhone')?.value || '').trim();
+      const address = (document.getElementById('clientAddress')?.value || '').trim();
+      const notes = (document.getElementById('customerMessage')?.value || '').trim();
+
+      let msg = '🌿 *Cotización Cortinas Terán*\n';
+      msg += '━━━━━━━━━━━━━━━━━\n';
+      if (name) msg += `👤 Cliente: ${name}\n`;
+      if (phone) msg += `📞 Teléfono: ${phone}\n`;
+      if (address) msg += `📍 Dirección: ${address}\n`;
+      if (name || phone || address) msg += '━━━━━━━━━━━━━━━━━\n';
+
+      if (calc.curtains.items.length) {
+        msg += `\n🪟 *Cortinas nuevas*\n`;
+        calc.curtains.items.forEach(i => msg += `  • ${i.label} — ${i.qty} × ${i.cfg.name} (${i.width}×${i.height}cm)${i.motor ? ' ⚡ Motor' : ''}: ${money(i.total)}\n`);
+        msg += `  Subtotal: ${money(calc.curtains.subtotal)}\n`;
+      }
+      if (calc.wash.items.length) {
+        msg += `\n🧺 *Lavado*\n`;
+        calc.wash.items.forEach(i => msg += `  • ${i.label} — ${i.qty} paños ${i.cfg.name}: ${money(i.total)}\n`);
+        msg += `  Subtotal: ${money(calc.wash.subtotal)}\n`;
+      }
+      if (calc.repairs.items.length) {
+        msg += `\n🔧 *Reparaciones*\n`;
+        calc.repairs.items.forEach(i => msg += `  • ${i.name} ×${i.qty}: ${money(i.total)}\n`);
+        msg += `  Subtotal: ${money(calc.repairs.subtotal)}\n`;
+      }
+      msg += `\n━━━━━━━━━━━━━━━━━\n💰 *TOTAL ESTIMADO: ${money(total)}*\n`;
+      msg += `\n✅ Incluye instalación profesional\n📍 Santiago — Visita técnica gratuita\n`;
+      if (notes) msg += `\n📝 Notas: ${notes}\n`;
+      msg += `\n_Cotización generada con Cortinas Terán Cotizador Digital_`;
+
+      const encoded = encodeURIComponent(msg);
+      window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    }
+
+    // EXCEL EXPORT
+    function exportExcel() {
+      const calc = computeTotals();
+      const total = calc.curtains.subtotal + calc.wash.subtotal + calc.repairs.subtotal;
+      const name = (document.getElementById('clientName')?.value || '').trim();
+      const phone = (document.getElementById('clientPhone')?.value || '').trim();
+      const address = (document.getElementById('clientAddress')?.value || '').trim();
+      const notes = (document.getElementById('customerMessage')?.value || '').trim();
+      const date = new Date().toLocaleDateString('es-CL');
+
+      const rows = [
+        ['CORTINAS TERÁN — COTIZACIÓN DIGITAL', '', '', ''],
+        ['Fecha:', date, '', ''],
+      ];
+      if (name) rows.push(['Cliente:', name, '', '']);
+      if (phone) rows.push(['Teléfono:', phone, '', '']);
+      if (address) rows.push(['Dirección:', address, '', '']);
+      rows.push(['', '', '', '']);
+      rows.push(['ÍTEM', 'DETALLE', 'CANTIDAD', 'PRECIO']);
+
+      if (calc.curtains.items.length) {
+        rows.push(['CORTINAS NUEVAS', '', '', '']);
+        calc.curtains.items.forEach(i => rows.push([i.label, `${i.cfg.name} ${i.width}×${i.height}cm${i.motor?' + Motor':''}`, i.qty, i.total]));
+        rows.push(['', 'Subtotal cortinas', '', calc.curtains.subtotal]);
+      }
+      if (calc.wash.items.length) {
+        rows.push(['LAVADO', '', '', '']);
+        calc.wash.items.forEach(i => rows.push([i.label, `${i.cfg.name} — ${i.qty} paños`, 1, i.total]));
+        rows.push(['', 'Subtotal lavado', '', calc.wash.subtotal]);
+      }
+      if (calc.repairs.items.length) {
+        rows.push(['REPARACIONES', '', '', '']);
+        calc.repairs.items.forEach(i => rows.push([i.name, '', i.qty, i.total]));
+        rows.push(['', 'Subtotal reparaciones', '', calc.repairs.subtotal]);
+      }
+      rows.push(['', '', '', '']);
+      rows.push(['TOTAL ESTIMADO', '', '', total]);
+      rows.push(['', '', '', '']);
+      rows.push(['Incluye instalación profesional en Santiago', '', '', '']);
+      rows.push(['Visita técnica gratuita', '', '', '']);
+      if (notes) rows.push(['Notas:', notes, '', '']);
+      rows.push(['', '', '', '']);
+      rows.push(['Herramienta digital por Wely', '', '', '']);
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{wch:40},{wch:35},{wch:12},{wch:18}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Cotización Terán');
+      XLSX.writeFile(wb, `Cotizacion_Teran_${date.replaceAll('/','_')}.xlsx`);
+      showExcelToast('Cotización_Terán descargada. Adjunta en WhatsApp o correo.');
+    }
+
+    function showExcelToast(msg) {
+      document.getElementById('toast-msg').textContent = msg;
+      const t = document.getElementById('excel-toast');
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 4000);
+    }
+    function closeExcelToast() { document.getElementById('excel-toast').classList.remove('show'); }
+
+    function resetAll() {
+      if (!confirm('¿Limpiar toda la cotización?')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      state = { ...defaultState };
+      renderAll();
+    }
+
+    function showModal(icon, msg) {
+      const ov = document.createElement('div');
+      ov.className = 'val-modal-overlay';
+      ov.innerHTML = `<div class="val-modal-box"><div class="val-modal-icon">${icon}</div><div class="val-modal-msg">${msg}</div><button class="btn btn-primary val-modal-btn" onclick="this.closest('.val-modal-overlay').remove()">Entendido</button></div>`;
+      document.body.appendChild(ov);
+    }
+
+    // INIT
+    document.addEventListener('DOMContentLoaded', () => {
+      renderAll();
+      setActiveTab(state.activeTab || 'curtains');
+      const msg = document.getElementById('customerMessage');
+      if (msg && state.customerMessage) msg.value = state.customerMessage;
+    });
+  </script>
+</body>
+</html>
